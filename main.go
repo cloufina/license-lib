@@ -39,7 +39,7 @@ func NetworkStr() string {
 	if addrs == nil {
 		panic(fmt.Errorf("network interface not found"))
 	}
-	return arrayutils.Map(addrs, interToStr)[0]
+	return arrayutils.Filter[string](arrayutils.Map(addrs, interToStr), func(v string, index int) bool { return strings.Contains(v, "||") })[0]
 }
 
 func interToStr(inter getmac.NetworkInterface, _ int) string {
