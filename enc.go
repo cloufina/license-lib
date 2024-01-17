@@ -12,12 +12,6 @@ import (
 	"strings"
 )
 
-// layer 1, original key
-// layer 2, reverse key
-// layer 3, pada hashKey awal di bagi 2, ambil yang pertama jadikan key di hash ulang
-// layer 4, pada hashKey awal di bagi 2, ambil yang kedua jadikan key di hash ulang
-// layer 5, base64 (mask)
-
 // hashKey hashes the given key to a 32-byte key using SHA-256
 func hashKey(key string) []byte {
 	hasher := sha256.New()
@@ -35,76 +29,102 @@ func reverseBytes(data []byte) []byte {
 	return reversedData
 }
 
-// Encode encrypts the text with AES and encodes it in Base64
-func Encode(secretKey string, text string) string {
-	key := hashKey(secretKey)
-
-	// Layer 1: AES Encryption with hashed key
+// aesEncrypt performs AES encryption on the given plaintext using the provided key
+func aesEncrypt(key []byte, plaintext string) []byte {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
 	}
-	plaintext := []byte(text)
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
-	iv := ciphertext[:aes.BlockSize] // using a zeroed IV for simplicity
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
-
-	// Layer 2: AES Encryption with reversed hashed key
-	reversedKey := reverseBytes(key)
-	block, err = aes.NewCipher(reversedKey)
+	aesGcm, err := cipher.NewGCM(block)
 	if err != nil {
 		panic(err.Error())
 	}
+	nonce := make([]byte, aesGcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		panic(err.Error())
+	}
+	return aesGcm.Seal(nonce, nonce, []byte(plaintext), nil)
+}
 
-	layer2Ciphertext := make([]byte, aes.BlockSize+len(ciphertext))
-	ivLayer2 := layer2Ciphertext[:aes.BlockSize] // New IV for second layer
-	stream = cipher.NewCFBEncrypter(block, ivLayer2)
-	stream.XORKeyStream(layer2Ciphertext[aes.BlockSize:], ciphertext)
+// aesDecrypt performs AES decryption on the given ciphertext using the provided key
+func aesDecrypt(key []byte, ciphertext []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aesGcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	nonceSize := aesGcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, errors.New("ciphertext too short")
+	}
+	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	return aesGcm.Open(nil, nonce, ciphertext, nil)
+}
 
-	// Layer 3: Base64 Encoding
-	finalCiphertext := base64.StdEncoding.EncodeToString(layer2Ciphertext)
-	return finalCiphertext
+// Encode encrypts the text with AES and encodes it in Base64
+func Encode(secretKey string, text string) string {
+	key := hashKey(secretKey)
+
+	// Layer 1: AES Encryption with original hashed key
+	ciphertext := aesEncrypt(key, text)
+
+	// Layer 2: AES Encryption with reversed hashed key
+	reversedKey := reverseBytes(key)
+	ciphertext = aesEncrypt(reversedKey, string(ciphertext))
+
+	// Layer 3: AES Encryption with first half of the original hashed key rehashed
+	firstHalfKey := hashKey(string(key[:len(key)/2]))
+	ciphertext = aesEncrypt(firstHalfKey, string(ciphertext))
+
+	// Layer 4: AES Encryption with second half of the original hashed key rehashed
+	secondHalfKey := hashKey(string(key[len(key)/2:]))
+	ciphertext = aesEncrypt(secondHalfKey, string(ciphertext))
+
+	// Layer 5: Base64 Encoding
+	return base64.StdEncoding.EncodeToString(ciphertext)
 }
 
 // Decode decrypts the Base64-encoded and AES-encrypted text
 func Decode(secretKey string, encodedText string) (string, error) {
 	key := hashKey(secretKey)
 
-	// Layer 3: Base64 Decoding
+	// Layer 5: Base64 Decoding
 	decodedText, err := base64.StdEncoding.DecodeString(encodedText)
 	if err != nil {
 		return "", err
 	}
 
-	// Layer 2: AES Decryption with reversed hashed key
-	if len(decodedText) < aes.BlockSize {
-		return "", errors.New("ciphertext too short")
-	}
-	ivLayer2 := decodedText[:aes.BlockSize]
-	layer2Ciphertext := make([]byte, len(decodedText)-aes.BlockSize)
-	reversedKey := reverseBytes(key)
-	block, err := aes.NewCipher(reversedKey)
+	// Layer 4: AES Decryption with second half of the original hashed key rehashed
+	secondHalfKey := hashKey(string(key[len(key)/2:]))
+	plaintext, err := aesDecrypt(secondHalfKey, decodedText)
 	if err != nil {
 		return "", err
 	}
-	stream := cipher.NewCFBDecrypter(block, ivLayer2)
-	stream.XORKeyStream(layer2Ciphertext, decodedText[aes.BlockSize:])
+
+	// Layer 3: AES Decryption with first half of the original hashed key rehashed
+	firstHalfKey := hashKey(string(key[:len(key)/2]))
+	plaintext, err = aesDecrypt(firstHalfKey, plaintext)
+	if err != nil {
+		return "", err
+	}
+
+	// Layer 2: AES Decryption with reversed hashed key
+	reversedKey := reverseBytes(key)
+	plaintext, err = aesDecrypt(reversedKey, plaintext)
+	if err != nil {
+		return "", err
+	}
 
 	// Layer 1: AES Decryption with original hashed key
-	if len(layer2Ciphertext) < aes.BlockSize {
-		return "", errors.New("ciphertext too short")
-	}
-	ivLayer1 := layer2Ciphertext[:aes.BlockSize]
-	finalPlaintext := make([]byte, len(layer2Ciphertext)-aes.BlockSize)
-	block, err = aes.NewCipher(key)
+	plaintext, err = aesDecrypt(key, plaintext)
 	if err != nil {
 		return "", err
 	}
-	stream = cipher.NewCFBDecrypter(block, ivLayer1)
-	stream.XORKeyStream(finalPlaintext, layer2Ciphertext[aes.BlockSize:])
 
-	return string(finalPlaintext), nil
+	return string(plaintext), nil
 }
 
 func EncryptAES(key, plaintext string) []byte {
