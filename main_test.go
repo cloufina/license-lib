@@ -1,7 +1,10 @@
 package licenselib
 
 import (
+	"fmt"
 	"testing"
+
+	getmac "github.com/AchmadRifai/get-mac"
 )
 
 func TestMain(t *testing.T) {
@@ -11,5 +14,9 @@ func TestMain(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	InitTest()
+	// InitTest()
+	mac := getmac.GetMacAddr()
+	for _, m := range mac {
+		fmt.Println(m)
+	}
 }

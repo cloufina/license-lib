@@ -53,7 +53,7 @@ func checkingLicense(features []string) {
 				return len(strings.Split(addr.Network, ".")) > 1
 			}), func(addr getmac.NetworkAddress, v int) string {
 				return addr.Network
-			}), func(s string, v int) bool { return strings.HasPrefix(s, "10.") })
+			}), func(s string, v int) bool { return strings.HasPrefix(s, "192.") })
 			return arrayutils.Contains(ips, data.ip)
 		}
 		return false

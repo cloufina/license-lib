@@ -96,7 +96,7 @@ func interToStr(inter getmac.NetworkInterface, _ int) string {
 func filterAddrLan(addr getmac.NetworkInterface, v int) bool {
 	next := false
 	if runtime.GOOS == "windows" {
-		next = strings.HasPrefix(addr.Name, "Local Area")
+		next = strings.HasPrefix(addr.Name, "Ethernet adapter Ethernet 6")
 	} else {
 		prefixes := []string{"enp", "eth"}
 		next = arrayutils.AnyOf(prefixes, func(s string, _ int) bool { return strings.HasPrefix(addr.Name, s) })
