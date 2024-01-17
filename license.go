@@ -22,7 +22,7 @@ func Init(features []string) {
 	} else {
 		panic(fmt.Errorf("please get the license first"))
 	}
-	time.Sleep(time.Minute)
+	time.Sleep(time.Hour * 24)
 	go Init(features)
 }
 
@@ -120,6 +120,8 @@ func licenseError() {
 	if r := recover(); r != nil {
 		log.Println("Catched", r)
 		log.Println("Stack", string(debug.Stack()))
+		dir, _ := os.Getwd()
+		log.Println(dir)
 		os.Exit(0)
 	}
 }
