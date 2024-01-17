@@ -71,19 +71,24 @@ func NetworkStr() string {
 	if addrs == nil {
 		addrs = arrayutils.Filter(getmac.GetMacAddr(), filterAddrWifi)
 	}
-	if addrs == nil {
+	strs := arrayutils.Filter[string](arrayutils.Map(addrs, interToStr), func(v string, index int) bool { return strings.Contains(v, "||") })
+	if strs == nil {
+		addrs = arrayutils.Filter(getmac.GetMacAddr(), filterAddrWifi)
+		strs = arrayutils.Filter[string](arrayutils.Map(addrs, interToStr), func(v string, index int) bool { return strings.Contains(v, "||") })
+	}
+	if strs == nil {
 		panic(fmt.Errorf("network interface not found"))
 	}
-	return arrayutils.Filter[string](arrayutils.Map(addrs, interToStr), func(v string, index int) bool { return strings.Contains(v, "||") })[0]
+	return strs[0]
 }
 
 func interToStr(inter getmac.NetworkInterface, _ int) string {
 	sa := []string{inter.Mac}
-	ips := arrayutils.Filter(arrayutils.Map(arrayutils.Filter(inter.IpAddrs, func(addr getmac.NetworkAddress, v int) bool {
+	ips := arrayutils.Map(arrayutils.Filter(inter.IpAddrs, func(addr getmac.NetworkAddress, v int) bool {
 		return len(strings.Split(addr.Network, ".")) > 1
 	}), func(addr getmac.NetworkAddress, v int) string {
 		return addr.Network
-	}), func(s string, v int) bool { return strings.HasPrefix(s, "10.") })
+	})
 	if ips != nil {
 		sa = append(sa, ips[0])
 	}
