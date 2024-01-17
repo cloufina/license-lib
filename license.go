@@ -14,10 +14,10 @@ import (
 
 func Init(features []string) {
 	defer licenseError()
-	if !isFileExists("activation.cl") {
+	if !isFileExists("./activation.cl") {
 		createActivation()
 	}
-	if isFileExists("license.cl") {
+	if isFileExists("./license.cl") {
 		checkingLicense(features)
 	} else {
 		panic(fmt.Errorf("please get the license first"))
@@ -27,7 +27,7 @@ func Init(features []string) {
 }
 
 func checkingLicense(features []string) {
-	content, err := os.ReadFile("license.cl")
+	content, err := os.ReadFile("./license.cl")
 	if err != nil {
 		panic(err)
 	}
@@ -86,10 +86,10 @@ func createActivation() {
 	pt := NetworkStr()
 	key := StrPad(pt, 32, "c", "RIGHT")
 	encrypted := EncryptAES([]byte(key), pt)
-	if err := os.WriteFile("activation.cl", encrypted, 0644); err != nil {
+	if err := os.WriteFile("./activation.cl", encrypted, 0644); err != nil {
 		panic(err)
 	}
-	if err := os.WriteFile("network.cl", []byte(pt), 0644); err != nil {
+	if err := os.WriteFile("./network.cl", []byte(pt), 0644); err != nil {
 		panic(err)
 	}
 	panic(fmt.Errorf("please get the license first"))
