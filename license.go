@@ -86,23 +86,11 @@ func createActivation() {
 	pt := NetworkStr()
 	key := StrPad(pt, 32, "c", "RIGHT")
 	encrypted := EncryptAES([]byte(key), pt)
-	f, err := os.Create("./activation.cl")
-	if err != nil {
-		panic(err)
-	}
-	if err := f.Close(); err != nil {
-		panic(err)
-	}
+	os.Create("./activation.cl")
 	if err := os.WriteFile("./activation.cl", encrypted, 0644); err != nil {
 		panic(err)
 	}
-	f, err = os.Create("./network.cl")
-	if err != nil {
-		panic(err)
-	}
-	if err := f.Close(); err != nil {
-		panic(err)
-	}
+	os.Create("./network.cl")
 	if err := os.WriteFile("./network.cl", []byte(pt), 0644); err != nil {
 		panic(err)
 	}
