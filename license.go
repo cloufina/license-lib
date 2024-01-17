@@ -12,21 +12,21 @@ import (
 	getmac "github.com/AchmadRifai/get-mac"
 )
 
-func Init(svcName string) {
+func Init(features []string) {
 	defer licenseError()
 	if !isFileExists("activation.cl") {
 		createActivation()
 	}
 	if isFileExists("license.cl") {
-		checkingLicense(svcName)
+		checkingLicense(features)
 	} else {
 		panic(fmt.Errorf("please get the license first"))
 	}
 	time.Sleep(time.Minute)
-	go Init(svcName)
+	go Init(features)
 }
 
-func checkingLicense(svcName string) {
+func checkingLicense(features []string) {
 	content, err := os.ReadFile("license.cl")
 	if err != nil {
 		panic(err)
@@ -35,18 +35,26 @@ func checkingLicense(svcName string) {
 	key := StrPad(pt, 32, "c", "RIGHT")
 	license := DecryptAES([]byte(key), content)
 	data := strLisenceToData(license)
-	if !arrayutils.AnyOf(getmac.GetMacAddr(), func(inter getmac.NetworkInterface, _ int) bool {
+	if arrayutils.NoneOf(getmac.GetMacAddr(), func(inter getmac.NetworkInterface, _ int) bool {
 		if inter.Mac == data.mac {
-			ips := arrayutils.Map(arrayutils.Filter(inter.IpAddrs, func(addr getmac.NetworkAddress, v int) bool {
+			ips := arrayutils.Filter(arrayutils.Map(arrayutils.Filter(inter.IpAddrs, func(addr getmac.NetworkAddress, v int) bool {
 				return len(strings.Split(addr.Network, ".")) > 1
 			}), func(addr getmac.NetworkAddress, v int) string {
 				return addr.Network
-			})
+			}), func(s string, v int) bool { return strings.HasPrefix(s, "10.") })
 			return arrayutils.Contains(ips, data.ip)
 		}
 		return false
 	}) {
 		panic(fmt.Errorf("invalid format license"))
+	}
+	if data.exp.Before(time.Now()) {
+		panic(fmt.Errorf("expired license"))
+	}
+	if arrayutils.AnyOf(features, func(v string, index int) bool {
+		return !arrayutils.Contains(data.features, v)
+	}) {
+		panic(fmt.Errorf("invalid license"))
 	}
 }
 
@@ -58,6 +66,12 @@ func strLisenceToData(lsc string) licenseData {
 	}
 	l.mac = sa1[0]
 	l.ip = sa1[1]
+	exp, err := time.Parse("2006-01-02", sa1[2])
+	if err != nil {
+		panic(err)
+	}
+	l.exp = exp
+	l.features = strings.Split(sa1[3], ",|")
 	return l
 }
 
@@ -73,6 +87,9 @@ func createActivation() {
 	key := StrPad(pt, 32, "c", "RIGHT")
 	encrypted := EncryptAES([]byte(key), pt)
 	if err := os.WriteFile("activation.cl", encrypted, 0644); err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile("network.cl", []byte(pt), 0644); err != nil {
 		panic(err)
 	}
 	panic(fmt.Errorf("please get the license first"))
