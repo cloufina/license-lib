@@ -14,3 +14,11 @@ func TestEncrypt(t *testing.T) {
 	// 	t.Error("Not same")
 	// }
 }
+
+func TestNetwrokStr(t *testing.T) {
+	net := NetworkStr()
+	fmt.Println(net)
+	if net != "" {
+		t.Error("Kudu ono isine")
+	}
+}
