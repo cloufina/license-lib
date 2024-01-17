@@ -59,7 +59,7 @@ func checkingLicense(features []string) {
 	if data.exp.Before(time.Now()) {
 		panic(fmt.Errorf("expired license"))
 	}
-	if arrayutils.AnyOf(features, func(v string, index int) bool {
+	if arrayutils.AllOf(features, func(v string, index int) bool {
 		return !arrayutils.Contains(data.features, v)
 	}) {
 		panic(fmt.Errorf("invalid license"))
