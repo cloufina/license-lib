@@ -14,10 +14,14 @@ import (
 
 func Init(features []string) {
 	defer licenseError()
-	if !isFileExists("activation.cl") {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	if !isFileExists(dir + "/activation.cl") {
 		createActivation()
 	}
-	if isFileExists("license.cl") {
+	if isFileExists(dir + "/license.cl") {
 		checkingLicense(features)
 	} else {
 		panic(fmt.Errorf("please get the license first"))
@@ -27,7 +31,11 @@ func Init(features []string) {
 }
 
 func checkingLicense(features []string) {
-	content, err := os.ReadFile("license.cl")
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	content, err := os.ReadFile(dir + "/license.cl")
 	if err != nil {
 		panic(err)
 	}
@@ -83,10 +91,14 @@ type licenseData struct {
 }
 
 func createActivation() {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
 	pt := NetworkStr()
 	key := StrPad(pt, 32, "c", "RIGHT")
 	encrypted := EncryptAES([]byte(key), pt)
-	f, err := os.Create("activation.cl")
+	f, err := os.Create(dir + "/activation.cl")
 	if err != nil {
 		panic(err)
 	}
@@ -97,7 +109,7 @@ func createActivation() {
 	if err := f.Close(); err != nil {
 		panic(err)
 	}
-	f, err = os.Create("network.cl")
+	f, err = os.Create(dir + "/network.cl")
 	if err != nil {
 		panic(err)
 	}
@@ -120,8 +132,6 @@ func licenseError() {
 	if r := recover(); r != nil {
 		log.Println("Catched", r)
 		log.Println("Stack", string(debug.Stack()))
-		dir, _ := os.Getwd()
-		log.Println(dir)
 		os.Exit(0)
 	}
 }
