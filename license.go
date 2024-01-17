@@ -125,7 +125,7 @@ func createActivation() {
 
 func isFileExists(posisi string) bool {
 	_, err := os.Stat(posisi)
-	return err != nil
+	return err == nil
 }
 
 func licenseError() {
