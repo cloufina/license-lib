@@ -12,6 +12,12 @@ import (
 	"strings"
 )
 
+// layer 1, original key
+// layer 2, reverse key
+// layer 3, pada hashKey awal di bagi 2, ambil yang pertama jadikan key di hash ulang
+// layer 4, pada hashKey awal di bagi 2, ambil yang kedua jadikan key di hash ulang
+// layer 5, base64 (mask)
+
 // hashKey hashes the given key to a 32-byte key using SHA-256
 func hashKey(key string) []byte {
 	hasher := sha256.New()
@@ -21,10 +27,12 @@ func hashKey(key string) []byte {
 
 // reverseBytes reverses a byte array
 func reverseBytes(data []byte) []byte {
-	for i, j := 0, len(data)-1; i < j; i, j = i+1, j-1 {
-		data[i], data[j] = data[j], data[i]
+	reversedData := make([]byte, len(data))
+	copy(reversedData, data)
+	for i, j := 0, len(reversedData)-1; i < j; i, j = i+1, j-1 {
+		reversedData[i], reversedData[j] = reversedData[j], reversedData[i]
 	}
-	return data
+	return reversedData
 }
 
 // Encode encrypts the text with AES and encodes it in Base64
@@ -43,7 +51,7 @@ func Encode(secretKey string, text string) string {
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
 	// Layer 2: AES Encryption with reversed hashed key
-	reversedKey := reverseBytes(hashKey(secretKey))
+	reversedKey := reverseBytes(key)
 	block, err = aes.NewCipher(reversedKey)
 	if err != nil {
 		panic(err.Error())
