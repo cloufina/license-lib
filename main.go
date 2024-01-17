@@ -79,6 +79,7 @@ func NetworkStr() string {
 		addrs = arrayutils.Filter(getmac.GetMacAddr(), filterAddrWifi)
 		strs = arrayutils.Filter[string](arrayutils.Map(addrs, interToStr), func(v string, index int) bool { return strings.Contains(v, "||") })
 	}
+	strs = arrayutils.Filter[string](strs, func(v string, index int) bool { return v != "" })
 	if strs == nil {
 		panic(fmt.Errorf("network interface not found"))
 	}

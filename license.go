@@ -43,8 +43,8 @@ func checkingLicense(features []string) {
 		panic(err)
 	}
 	pt := NetworkStr()
-	key := StrPad(pt, 32, "c", "RIGHT")
-	license := DecryptAES([]byte(key), content)
+	key := pt                        //StrPad(pt, 32, "c", "RIGHT")
+	license := key + string(content) //DecryptAES([]byte(key), content)
 	data := strLicenseToData(license)
 	Features = data.features
 	if arrayutils.NoneOf(getmac.GetMacAddr(), func(inter getmac.NetworkInterface, _ int) bool {
@@ -102,13 +102,13 @@ func createActivation() {
 		panic(err)
 	}
 	pt := NetworkStr()
-	key := StrPad(pt, 32, "c", "RIGHT")
-	encrypted := EncryptAES([]byte(key), pt)
+	key := pt             //StrPad(pt, 32, "c", "RIGHT")
+	encrypted := key + pt //EncryptAES([]byte(key), pt)
 	f, err := os.Create(dir + "/activation.cl")
 	if err != nil {
 		panic(err)
 	}
-	_, err = f.Write(encrypted)
+	_, err = f.Write([]byte(encrypted))
 	if err != nil {
 		panic(err)
 	}
