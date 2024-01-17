@@ -12,6 +12,9 @@ import (
 	getmac "github.com/AchmadRifai/get-mac"
 )
 
+var IsNext bool
+var Features []string
+
 func Init(features []string) {
 	defer licenseError()
 	dir, err := os.Getwd()
@@ -42,7 +45,8 @@ func checkingLicense(features []string) {
 	pt := NetworkStr()
 	key := StrPad(pt, 32, "c", "RIGHT")
 	license := DecryptAES([]byte(key), content)
-	data := strLisenceToData(license)
+	data := strLicenseToData(license)
+	Features = data.features
 	if arrayutils.NoneOf(getmac.GetMacAddr(), func(inter getmac.NetworkInterface, _ int) bool {
 		if inter.Mac == data.mac {
 			ips := arrayutils.Filter(arrayutils.Map(arrayutils.Filter(inter.IpAddrs, func(addr getmac.NetworkAddress, v int) bool {
@@ -64,9 +68,11 @@ func checkingLicense(features []string) {
 	}) {
 		panic(fmt.Errorf("invalid license"))
 	}
+
+	IsNext = true
 }
 
-func strLisenceToData(lsc string) licenseData {
+func strLicenseToData(lsc string) licenseData {
 	var l licenseData
 	sa1 := strings.Split(lsc, "||")
 	if len(sa1) != 4 {
@@ -132,6 +138,5 @@ func licenseError() {
 	if r := recover(); r != nil {
 		log.Println("Catched", r)
 		log.Println("Stack", string(debug.Stack()))
-		os.Exit(0)
 	}
 }
