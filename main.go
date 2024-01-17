@@ -2,8 +2,11 @@ package licenselib
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	arrayutils "github.com/AchmadRifai/array-utils"
@@ -42,7 +45,7 @@ func Main() bool {
 func checking() {
 	features := []string{"features1", "features2"}
 	license := "60:14:b3:6c:17:bf||192.168.1.18/24||2024-01-18||features1,|features2"
-	data := strLisenceToData(license)
+	data := strLicenseToData(license)
 	if arrayutils.NoneOf(getmac.GetMacAddr(), func(inter getmac.NetworkInterface, _ int) bool {
 		if inter.Mac == data.mac {
 			ips := arrayutils.Map(arrayutils.Filter(inter.IpAddrs, func(addr getmac.NetworkAddress, v int) bool {
@@ -109,4 +112,18 @@ func filterAddrWifi(addr getmac.NetworkInterface, v int) bool {
 		next = strings.HasPrefix(addr.Name, "wl")
 	}
 	return arrayutils.Contains(addr.Flags, "broadcast") && next
+}
+
+func InitTest() {
+	IsNext = false
+	go Init([]string{"features1", "features2"})
+	time.Sleep(time.Second * 3)
+	if !IsNext {
+		// Listen to Ctrl+C (you can also do something else that prevents the program from exiting)
+		fmt.Println("Press Ctrl+C for close...")
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		<-c
+		os.Exit(0)
+	}
 }
